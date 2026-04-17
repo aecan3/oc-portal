@@ -177,16 +177,16 @@ export default async function DashboardView() {
             <p className="mt-2 text-sm font-medium text-slate-600">Your next levy is due in 7 days.</p>
 
             <div className="flex flex-1 flex-col">
-              <div className="mt-4 flex flex-row flex-wrap gap-4">
+              <div className="mt-4 flex w-full flex-col gap-3 md:w-auto md:flex-row">
                 <Link
                   href="/payment"
-                  className="inline-flex min-h-[2.75rem] flex-1 items-center justify-center rounded-xl bg-[#4F46E5] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#4338CA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 sm:flex-initial sm:min-w-[10rem]"
+                  className="inline-flex min-h-[2.75rem] w-full items-center justify-center rounded-xl bg-[#4F46E5] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#4338CA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5] focus-visible:ring-offset-2 md:w-auto md:min-w-[10rem]"
                 >
                   Pay Levy
                 </Link>
                 <Link
                   href="/direct-debit"
-                  className="inline-flex min-h-[2.75rem] flex-1 items-center justify-center rounded-xl border-2 border-indigo-600 bg-white px-5 py-3.5 text-sm font-semibold text-indigo-600 shadow-sm transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:flex-initial sm:min-w-[10rem]"
+                  className="inline-flex min-h-[2.75rem] w-full items-center justify-center rounded-xl border-2 border-indigo-600 bg-white px-5 py-3.5 text-sm font-semibold text-indigo-600 shadow-sm transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 md:w-auto md:min-w-[10rem]"
                 >
                   Set up Direct Debit
                 </Link>

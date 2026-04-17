@@ -118,10 +118,10 @@ export default function RecordsAccessCard() {
           </ul>
         )}
 
-        <div className="mt-auto pt-6">
+        <div className="mt-auto flex w-full flex-col gap-3 pt-6 md:w-auto md:flex-row">
           <Link
             href="/documents"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-indigo-600 bg-white px-4 py-3.5 text-sm font-semibold text-indigo-600 shadow-sm transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-indigo-600 bg-white px-4 py-3.5 text-sm font-semibold text-indigo-600 shadow-sm transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 md:w-auto"
           >
             View Document Library
           </Link>

@@ -74,34 +74,38 @@ export default function DocumentsListClient({
         <div className="mt-5 space-y-6">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{CAT_PLAN}</p>
-            <ul className="space-y-2">
-              {planDoc ? (
-                <ArchiveDocumentRow
-                  key={String(planDoc.id)}
-                  doc={planDoc}
-                  onPatched={onDocumentPatched}
-                  onRemoved={onDocumentRemoved}
-                />
-              ) : (
-                <li className={PERMANENT_EMPTY_ROW}>No Plan of Subdivision uploaded yet.</li>
-              )}
-            </ul>
+            <div className="overflow-x-auto w-full">
+              <ul className="space-y-2">
+                {planDoc ? (
+                  <ArchiveDocumentRow
+                    key={String(planDoc.id)}
+                    doc={planDoc}
+                    onPatched={onDocumentPatched}
+                    onRemoved={onDocumentRemoved}
+                  />
+                ) : (
+                  <li className={PERMANENT_EMPTY_ROW}>No Plan of Subdivision uploaded yet.</li>
+                )}
+              </ul>
+            </div>
           </div>
 
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{CAT_RULES}</p>
-            <ul className="space-y-2">
-              {rulesDoc ? (
-                <ArchiveDocumentRow
-                  key={String(rulesDoc.id)}
-                  doc={rulesDoc}
-                  onPatched={onDocumentPatched}
-                  onRemoved={onDocumentRemoved}
-                />
-              ) : (
-                <li className={PERMANENT_EMPTY_ROW}>No Rules/Legal uploaded yet.</li>
-              )}
-            </ul>
+            <div className="overflow-x-auto w-full">
+              <ul className="space-y-2">
+                {rulesDoc ? (
+                  <ArchiveDocumentRow
+                    key={String(rulesDoc.id)}
+                    doc={rulesDoc}
+                    onPatched={onDocumentPatched}
+                    onRemoved={onDocumentRemoved}
+                  />
+                ) : (
+                  <li className={PERMANENT_EMPTY_ROW}>No Rules/Legal uploaded yet.</li>
+                )}
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -142,16 +146,18 @@ export default function DocumentsListClient({
               return (
                 <div key={cat}>
                   <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{cat}</h3>
-                  <ul className="space-y-2">
-                    {list.map((doc) => (
-                      <ArchiveDocumentRow
-                        key={String(doc.id)}
-                        doc={doc}
-                        onPatched={onDocumentPatched}
-                        onRemoved={onDocumentRemoved}
-                      />
-                    ))}
-                  </ul>
+                  <div className="overflow-x-auto w-full">
+                    <ul className="space-y-2">
+                      {list.map((doc) => (
+                        <ArchiveDocumentRow
+                          key={String(doc.id)}
+                          doc={doc}
+                          onPatched={onDocumentPatched}
+                          onRemoved={onDocumentRemoved}
+                        />
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               );
             })}
