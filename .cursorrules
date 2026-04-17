@@ -1,0 +1,10 @@
+You are an expert Next.js and web developer. 
+We are building a SaaS portal for Victorian Owners Corporations (OCs). 
+You must use:
+- Next.js App Router (React)
+- Tailwind CSS for all styling
+- shadcn/ui for UI components
+- Supabase for the Database and Authentication
+
+Key Ethos: Total transparency, simplicity, and open banking integration. 
+Focus on Tier 4 and Tier 5 OCs in Victoria.
