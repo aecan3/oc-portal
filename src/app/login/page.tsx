@@ -31,7 +31,7 @@ export default function LoginPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
-        router.replace("/");
+        router.replace("/dashboard");
       }
     };
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/");
+    router.replace("/dashboard");
     router.refresh();
   };
 

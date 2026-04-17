@@ -30,7 +30,7 @@ export default function SignUpPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
-        router.replace("/");
+        router.replace("/onboarding");
       }
     };
 
@@ -62,7 +62,7 @@ export default function SignUpPage() {
     }
 
     if (data.session) {
-      router.push("/");
+      router.push("/onboarding");
       router.refresh();
       return;
     }
