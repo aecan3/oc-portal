@@ -28,8 +28,8 @@ function rowsFromSharedTransactions(currentBalance: number): StatementRow[] {
       debit,
       running,
     };
-    if (credit != null) running -= credit;
-    if (debit != null) running += debit;
+    if (credit != null) running += credit;
+    if (debit != null) running -= debit;
     return row;
   });
 }

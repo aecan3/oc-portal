@@ -40,7 +40,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <Navbar />
-        <div className="flex flex-1 flex-col">{children}</div>
+        <div className="flex flex-1 flex-col pt-12 sm:pt-14">{children}</div>
         <Toaster richColors position="top-right" />
       </body>
     </html>
