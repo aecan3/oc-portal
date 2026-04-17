@@ -8,10 +8,11 @@ import { createBrowserSupabaseClient } from "@/lib/supabase";
 type DocumentRow = {
   id: string | number;
   title: string | null;
-  storage_path: string | null;
-  bucket: string | null;
-  uploaded_at: string | null;
-  created_at: string | null;
+  file_path?: string | null;
+  storage_path?: string | null;
+  bucket?: string | null;
+  uploaded_at?: string | null;
+  created_at?: string | null;
 };
 
 function toTimestamp(value: unknown) {
@@ -74,7 +75,12 @@ export default function RecordsAccessCard() {
         ) : (
           <ul className="space-y-1.5">
             {docs.map((doc) => {
-              const storagePath = typeof doc.storage_path === "string" ? doc.storage_path : null;
+              const storagePath =
+                typeof doc.file_path === "string"
+                  ? doc.file_path
+                  : typeof doc.storage_path === "string"
+                    ? doc.storage_path
+                    : null;
               const bucket = typeof doc.bucket === "string" && doc.bucket ? doc.bucket : "property-docs";
               const downloadUrl = storagePath
                 ? supabase.storage.from(bucket).getPublicUrl(storagePath).data.publicUrl

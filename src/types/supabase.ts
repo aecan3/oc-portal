@@ -168,6 +168,143 @@ export type Database = {
           },
         ];
       };
+      documents: {
+        Row: {
+          id: string;
+          title: string;
+          category: string;
+          uploaded_at: string;
+          file_path: string;
+          property_id: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          category: string;
+          uploaded_at?: string;
+          file_path: string;
+          property_id: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          category?: string;
+          uploaded_at?: string;
+          file_path?: string;
+          property_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "documents_property_id_fkey";
+            columns: ["property_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      motions: {
+        Row: {
+          id: string;
+          property_id: string;
+          created_by: string;
+          title: string;
+          resolution: string;
+          closing_date: string;
+          other_points: string | null;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          property_id: string;
+          created_by: string;
+          title: string;
+          resolution: string;
+          closing_date: string;
+          other_points?: string | null;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          property_id?: string;
+          created_by?: string;
+          title?: string;
+          resolution?: string;
+          closing_date?: string;
+          other_points?: string | null;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "motions_property_id_fkey";
+            columns: ["property_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "motions_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      agm_notices: {
+        Row: {
+          id: string;
+          property_id: string;
+          created_by: string;
+          meeting_at: string;
+          location: string;
+          agenda_items: string;
+          manager_report: string | null;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          property_id: string;
+          created_by: string;
+          meeting_at: string;
+          location: string;
+          agenda_items: string;
+          manager_report?: string | null;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          property_id?: string;
+          created_by?: string;
+          meeting_at?: string;
+          location?: string;
+          agenda_items?: string;
+          manager_report?: string | null;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "agm_notices_property_id_fkey";
+            columns: ["property_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "agm_notices_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;

@@ -103,6 +103,16 @@ export default function DocumentUploadDropzone({
       if (userError) throw userError;
       if (!user) throw new Error("Not authenticated.");
 
+      const { data: propRows, error: propError } = await supabase
+        .from("properties")
+        .select("id")
+        .order("id", { ascending: true })
+        .limit(1);
+
+      if (propError) throw propError;
+      const propertyId = propRows?.[0]?.id ?? null;
+      if (!propertyId) throw new Error("No property found to attach this document.");
+
       const ext = file.name.includes(".") ? file.name.split(".").pop() : undefined;
       const safeExt = ext ? `.${ext}` : "";
 
@@ -121,15 +131,13 @@ export default function DocumentUploadDropzone({
 
       setUploadProgress(70);
 
-      const publicUrl = supabase.storage.from(bucket).getPublicUrl(storagePath).data.publicUrl;
-
       // Best-effort insert. If your schema differs, we’ll surface the Supabase error.
       const { error: insertError } = await supabase.from("documents").insert({
         title: file.name.replace(safeExt, ""),
         category: selectedCategory,
         uploaded_at: new Date().toISOString(),
-        file_url: publicUrl,
-        storage_path: storagePath,
+        file_path: storagePath,
+        property_id: propertyId,
       });
 
       if (insertError) throw insertError;

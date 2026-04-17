@@ -153,7 +153,7 @@ export default function UploadNewDocumentCard({
         category,
         property_id: insertPropertyId,
         uploaded_at: new Date().toISOString(),
-        storage_path: storagePath,
+        file_path: storagePath,
       });
 
       if (insertError) {
