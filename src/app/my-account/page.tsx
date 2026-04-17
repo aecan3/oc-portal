@@ -1,142 +1,301 @@
-import Link from "next/link";
+"use client";
 
-const formatMoney = (n: number) =>
-  new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(n);
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { roleHomePath, resolveUserRole } from "@/lib/userRole";
 
-const MAINTENANCE_NOTICES = [
-  {
-    id: "1",
-    title: "Upcoming: Driveway repair share",
-    detail: "$500 due 1 Nov 2025",
-    tone: "amber" as const,
-  },
-  {
-    id: "2",
-    title: "Lift modernisation levy",
-    detail: "$1,200 instalment due 15 Dec 2025",
-    tone: "slate" as const,
-  },
-];
-
-const PAYMENT_HISTORY = [
-  { id: "1", date: "2025-07-01", description: "Q2 levy — receipt #INV-24091", amount: 485.0, method: "BPAY" },
-  { id: "2", date: "2025-04-02", description: "Q1 levy — receipt #INV-23802", amount: 485.0, method: "Direct debit" },
-  { id: "3", date: "2025-01-05", description: "Q4 levy — receipt #INV-23544", amount: 470.0, method: "BPAY" },
-  { id: "4", date: "2024-10-03", description: "Q3 levy — receipt #INV-23211", amount: 470.0, method: "Card" },
-  { id: "5", date: "2024-07-08", description: "Special levy — insurance top-up", amount: 200.0, method: "BPAY" },
-];
+type ProfileRow = {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  mobile_number?: string | null;
+  home_address?: string | null;
+  full_name?: string | null;
+};
 
 export default function MyAccountPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [homeAddress, setHomeAddress] = useState("");
+  const [propertyAddress, setPropertyAddress] = useState("Not linked yet");
+  const [unitNumber, setUnitNumber] = useState("Not assigned");
+
+  const supabase = useMemo(() => {
+    try {
+      return createBrowserSupabaseClient();
+    } catch {
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) {
+      setErrorMessage("Supabase environment variables are missing.");
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadPage = async () => {
+      setLoading(true);
+      setErrorMessage("");
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (cancelled) return;
+      if (userError || !user) {
+        setErrorMessage(userError?.message ?? "You must be signed in to view account settings.");
+        setLoading(false);
+        return;
+      }
+
+      setUserId(user.id);
+      setEmail(user.email ?? "");
+
+      const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+      if (!cancelled && profile && typeof profile === "object") {
+        const row = profile as ProfileRow;
+        const resolvedFirst = row.first_name || row.full_name?.split(" ")[0] || row.full_name || "";
+        const resolvedLast =
+          row.last_name || (row.full_name?.split(" ").slice(1).join(" ").trim() ? row.full_name.split(" ").slice(1).join(" ").trim() : "");
+        setFirstName(resolvedFirst);
+        setLastName(resolvedLast);
+        setMobileNumber(row.mobile_number || "");
+        setHomeAddress(row.home_address || "");
+      }
+
+      let role = "unknown";
+      try {
+        role = await resolveUserRole(supabase, user.id);
+      } catch {
+        role = "unknown";
+      }
+
+      if (role === "manager") {
+        const { data: managedProperty } = await supabase
+          .from("properties")
+          .select("id,address")
+          .eq("manager_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!cancelled && managedProperty) {
+          setPropertyAddress(managedProperty.address || "Not linked yet");
+          setUnitNumber("Secretary / Manager");
+        }
+      } else {
+        const { data: approvedJoin } = await supabase
+          .from("join_requests")
+          .select("property_id")
+          .eq("user_id", user.id)
+          .eq("status", "approved")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (approvedJoin?.property_id) {
+          const [{ data: property }, { data: lot }] = await Promise.all([
+            supabase.from("properties").select("address").eq("id", approvedJoin.property_id).maybeSingle(),
+            supabase
+              .from("lots")
+              .select("lot_number")
+              .eq("property_id", approvedJoin.property_id)
+              .eq("owner_id", user.id)
+              .limit(1)
+              .maybeSingle(),
+          ]);
+
+          if (!cancelled) {
+            setPropertyAddress(property?.address || "Not linked yet");
+            setUnitNumber(lot?.lot_number || "Not assigned");
+          }
+        }
+      }
+
+      setLoading(false);
+    };
+
+    void loadPage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
+
+  const onSaveChanges = async () => {
+    if (!supabase || !userId) return;
+    setSaving(true);
+    setErrorMessage("");
+
+    const fullName = `${firstName} ${lastName}`.trim();
+    const { error } = await supabase.from("profiles").upsert(
+      {
+        id: userId,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        mobile_number: mobileNumber || null,
+        home_address: homeAddress || null,
+        full_name: fullName || null,
+      },
+      { onConflict: "id" },
+    );
+
+    setSaving(false);
+    if (error) {
+      setErrorMessage(error.message);
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Account settings updated.");
+    router.refresh();
+  };
+
+  const onResetPassword = async () => {
+    if (!supabase || !email) return;
+    setSendingReset(true);
+    setErrorMessage("");
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
+
+    setSendingReset(false);
+    if (error) {
+      setErrorMessage(error.message);
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Reset link sent. Check your inbox.");
+  };
+
   return (
-    <main className="min-h-[calc(100vh-3.5rem)] bg-slate-50 pb-12 font-sans text-slate-900">
-      <div className="border-b border-slate-200/90 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-          <Link
-            href="/"
-            className="text-sm font-semibold text-indigo-600 underline decoration-indigo-600/30 underline-offset-4 hover:text-indigo-700"
-          >
-            ← Back to dashboard
-          </Link>
-          <h1 className="mt-6 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">My Levies &amp; Account</h1>
-          <p className="mt-2 text-sm font-medium text-slate-600">Unit 4 — placeholder owner view for layout review.</p>
+    <main className="min-h-screen bg-slate-50 px-4 py-8 font-sans text-slate-900 sm:px-6">
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">My Account</h1>
+          <p className="mt-1 text-sm font-medium text-slate-600">Update your profile details and security settings.</p>
         </div>
-      </div>
 
-      <div className="mx-auto max-w-6xl space-y-8 px-4 pt-8 sm:px-6 lg:px-8">
-        {/* Current status */}
-        <section className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50/90 to-white p-6 shadow-sm sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">Current status</p>
-          <div className="mt-6 grid gap-8 sm:grid-cols-2">
-            <div>
-              <p className="text-sm font-semibold text-slate-600">Amount due</p>
-              <p className="mt-2 text-4xl font-extrabold tabular-nums tracking-tight text-slate-900 sm:text-5xl">
-                {formatMoney(485.0)}
-              </p>
-              <p className="mt-2 text-xs font-medium text-slate-500">Includes admin &amp; capital works components (illustrative).</p>
-            </div>
-            <div className="rounded-xl border border-indigo-100 bg-white/80 p-5">
-              <p className="text-sm font-semibold text-slate-600">Next upcoming levy</p>
-              <p className="mt-2 text-lg font-bold text-slate-900">Q1 2026 — Admin &amp; sinking</p>
-              <p className="mt-1 text-sm font-medium text-slate-600">Due 15 Jan 2026</p>
-              <p className="mt-3 text-sm font-semibold tabular-nums text-indigo-700">{formatMoney(485.0)} estimated</p>
-            </div>
+        {errorMessage ? (
+          <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{errorMessage}</p>
+        ) : null}
+
+        <div className="space-y-5">
+          <Card>
+            <CardHeader>
+              <CardTitle>Personal Details</CardTitle>
+              <CardDescription>Keep your user profile details up to date.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="first-name">First Name</Label>
+                <Input
+                  id="first-name"
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  placeholder="Alex"
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="last-name">Last Name</Label>
+                <Input
+                  id="last-name"
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                  placeholder="Smith"
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" value={email} readOnly disabled />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="mobile-number">Mobile Number</Label>
+                <Input
+                  id="mobile-number"
+                  value={mobileNumber}
+                  onChange={(event) => setMobileNumber(event.target.value)}
+                  placeholder="+61 4xx xxx xxx"
+                  disabled={loading}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Residential Address (for investors/off-site owners)</CardTitle>
+              <CardDescription>Store your off-site postal address for notices and records.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Label htmlFor="home-address">Home Address</Label>
+              <Input
+                id="home-address"
+                value={homeAddress}
+                onChange={(event) => setHomeAddress(event.target.value)}
+                placeholder="12 Collins St, Melbourne VIC 3000"
+                disabled={loading}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Property Info</CardTitle>
+              <CardDescription>Your currently linked property and unit.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="unit-number">Unit Number</Label>
+                <Input id="unit-number" value={unitNumber} readOnly disabled />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="property-address">Property Address</Label>
+                <Input id="property-address" value={propertyAddress} readOnly disabled />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Security</CardTitle>
+              <CardDescription>Send yourself a secure password reset link.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button type="button" variant="outline" onClick={() => void onResetPassword()} disabled={loading || sendingReset}>
+                {sendingReset ? "Sending reset link..." : "Reset Password"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button type="button" onClick={() => void onSaveChanges()} disabled={loading || saving}>
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
-        </section>
-
-        {/* Direct debit */}
-        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Payments</p>
-              <h2 className="mt-2 text-xl font-extrabold text-slate-900">Automate your payments</h2>
-              <p className="mt-2 max-w-xl text-sm font-medium text-slate-600">
-                Never miss a due date. Set up a direct debit from your nominated account and levies will be drawn on the schedule
-                the OC publishes.
-              </p>
-            </div>
-            <Link
-              href="/direct-debit"
-              className="inline-flex shrink-0 items-center justify-center rounded-xl bg-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-            >
-              Set up Direct Debit
-            </Link>
-          </div>
-        </section>
-
-        {/* Maintenance notices */}
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Maintenance notices</h2>
-          <ul className="mt-4 space-y-3">
-            {MAINTENANCE_NOTICES.map((n) => (
-              <li
-                key={n.id}
-                className={
-                  n.tone === "amber"
-                    ? "rounded-xl border border-amber-200/90 bg-amber-50/90 px-4 py-4 sm:px-5"
-                    : "rounded-xl border border-slate-200 bg-white px-4 py-4 sm:px-5"
-                }
-              >
-                <p className={`text-sm font-bold ${n.tone === "amber" ? "text-amber-950" : "text-slate-900"}`}>{n.title}</p>
-                <p className={`mt-1 text-sm font-semibold ${n.tone === "amber" ? "text-amber-900/90" : "text-slate-600"}`}>
-                  {n.detail}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Payment history */}
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Payment history</h2>
-          <p className="mt-1 text-sm font-medium text-slate-600">Past payments and receipts (placeholder).</p>
-
-          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    <th className="whitespace-nowrap px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Description</th>
-                    <th className="whitespace-nowrap px-4 py-3">Method</th>
-                    <th className="whitespace-nowrap px-4 py-3 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {PAYMENT_HISTORY.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/80">
-                      <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">{p.date}</td>
-                      <td className="px-4 py-3 font-medium text-slate-900">{p.description}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{p.method}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-emerald-600">
-                        {formatMoney(p.amount)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
+        </div>
       </div>
     </main>
   );

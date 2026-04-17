@@ -1,7 +1,7 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,21 +25,7 @@ export default function SetupOCPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
-  const [managerId, setManagerId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
-
-  useEffect(() => {
-    if (!supabase) return;
-
-    const loadCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setManagerId(user?.id ?? null);
-    };
-
-    void loadCurrentUser();
-  }, [supabase]);
 
   const onPickPdf = (file: File | null) => {
     if (!file) return;
@@ -81,8 +67,13 @@ export default function SetupOCPage() {
       alert(message);
       return;
     }
-    if (!managerId) {
-      const message = "You must be signed in before creating an Owners Corporation.";
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      const message = "You must be logged in to create a property";
       setErrorMessage(message);
       alert(message);
       return;
@@ -98,7 +89,7 @@ export default function SetupOCPage() {
           address: address.trim(),
           plan_number: planNumber.trim(),
           total_lots: totalLots,
-          manager_id: managerId,
+          manager_id: user.id,
         })
         .select("id")
         .single();
@@ -123,6 +114,7 @@ export default function SetupOCPage() {
       router.push("/dashboard");
       router.refresh();
     } catch (error: unknown) {
+      console.error(error);
       const message = error instanceof Error ? error.message : "Failed to create Owners Corporation setup.";
       setErrorMessage(message);
       alert(message);

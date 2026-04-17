@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { roleHomePath, resolveUserRole } from "@/lib/userRole";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
@@ -31,7 +32,8 @@ export default function LoginPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
-        router.replace("/dashboard");
+        const role = await resolveUserRole(supabase, user.id);
+        router.replace(roleHomePath(role));
       }
     };
 
@@ -61,7 +63,16 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace("/dashboard");
+    const {
+      data: { user: authedUser },
+    } = await supabase.auth.getUser();
+    if (!authedUser) {
+      setErrorMessage("Unable to resolve user session after sign in.");
+      return;
+    }
+
+    const role = await resolveUserRole(supabase, authedUser.id);
+    router.replace(roleHomePath(role));
     router.refresh();
   };
 
@@ -85,7 +96,7 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#4F46E5] focus:ring-4 focus:ring-[#4F46E5]/10"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#4F46E5] focus:ring-4 focus:ring-[#4F46E5]/10 sm:text-sm"
               placeholder="alex@example.com"
               required
             />
@@ -101,7 +112,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#4F46E5] focus:ring-4 focus:ring-[#4F46E5]/10"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#4F46E5] focus:ring-4 focus:ring-[#4F46E5]/10 sm:text-sm"
               placeholder="Enter your password"
               required
             />

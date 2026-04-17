@@ -1,52 +1,79 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import Link from "next/link";
+import { MOCK_TOTAL_BANK_BALANCE, MOCK_TRANSACTIONS } from "@/lib/mockFinancialData";
+import { getSupabaseProjectConfig } from "@/lib/supabase";
+import { roleHomePath, resolveUserRole } from "@/lib/userRole";
 
 type StatementRow = {
   date: string;
   description: string;
   credit: number | null;
   debit: number | null;
+  running: number;
 };
-
-const PLACEHOLDER_ROWS: StatementRow[] = [
-  { date: "2025-09-30", description: "Balance brought forward", credit: 18256.4, debit: null },
-  { date: "2025-10-02", description: "Q1 levy — Unit 4", credit: 485.0, debit: null },
-  { date: "2025-10-03", description: "Electricity — common property", credit: null, debit: 312.4 },
-  { date: "2025-10-05", description: "Lift service — monthly", credit: null, debit: 890.0 },
-  { date: "2025-10-07", description: "Q1 levy — Unit 1", credit: 485.0, debit: null },
-  { date: "2025-10-09", description: "Water — quarter", credit: null, debit: 228.15 },
-  { date: "2025-10-12", description: "Lobby repaint — progress", credit: null, debit: 2400.0 },
-  { date: "2025-10-14", description: "Special levy — fire compliance", credit: 1200.0, debit: null },
-  { date: "2025-10-16", description: "Gardening contract", credit: null, debit: 440.0 },
-  { date: "2025-10-18", description: "Gas — common areas", credit: null, debit: 156.8 },
-  { date: "2025-10-20", description: "Q1 levy — Unit 7", credit: 485.0, debit: null },
-  { date: "2025-10-22", description: "Insurance — OC policy", credit: null, debit: 1840.0 },
-  { date: "2025-10-24", description: "Interest earned", credit: 12.35, debit: null },
-  { date: "2025-10-26", description: "Strata manager fees — October", credit: null, debit: 660.0 },
-  { date: "2025-10-28", description: "Q1 levy — Unit 2", credit: 485.0, debit: null },
-];
 
 const formatMoney = (n: number) =>
   new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(n);
 
-function rowsWithRunningBalance(rows: StatementRow[]) {
-  let running = 0;
-  return rows.map((r) => {
-    if (r.credit != null) running += r.credit;
-    if (r.debit != null) running -= r.debit;
-    return { ...r, running };
+function rowsFromSharedTransactions(currentBalance: number): StatementRow[] {
+  let running = currentBalance;
+  return MOCK_TRANSACTIONS.map((tx) => {
+    const credit = tx.type === "Credit" ? tx.amount : null;
+    const debit = tx.type === "Debit" ? tx.amount : null;
+    const row: StatementRow = {
+      date: tx.transaction_date,
+      description: tx.description,
+      credit,
+      debit,
+      running,
+    };
+    if (credit != null) running -= credit;
+    if (debit != null) running += debit;
+    return row;
   });
 }
 
-export default function BankStatementPage() {
-  const computed = rowsWithRunningBalance(PLACEHOLDER_ROWS);
-  const currentBalance = computed.length > 0 ? computed[computed.length - 1].running : 0;
+export default async function BankStatementPage() {
+  const currentBalance = MOCK_TOTAL_BANK_BALANCE;
+  const computed = rowsFromSharedTransactions(currentBalance);
+  let backHref = "/onboarding";
+
+  const cookieStore = await cookies();
+  let supabaseConfig: ReturnType<typeof getSupabaseProjectConfig> | null = null;
+  try {
+    supabaseConfig = getSupabaseProjectConfig();
+  } catch {
+    supabaseConfig = null;
+  }
+
+  if (supabaseConfig) {
+    const supabase = createServerClient(supabaseConfig.url, supabaseConfig.anonKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll() {
+          // Read-only page.
+        },
+      },
+    });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const role = await resolveUserRole(supabase, user.id);
+      backHref = roleHomePath(role);
+    }
+  }
 
   return (
     <main className="min-h-[calc(100vh-3.5rem)] bg-slate-50 pb-12 font-sans text-slate-900">
       <div className="border-b border-slate-200/90 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
           <Link
-            href="/"
+            href={backHref}
             className="text-sm font-semibold text-indigo-600 underline decoration-indigo-600/30 underline-offset-4 hover:text-indigo-700"
           >
             ← Back to dashboard
@@ -78,7 +105,7 @@ export default function BankStatementPage() {
 
       <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8">
         <p className="text-sm font-medium text-slate-600">
-          Full transaction register (placeholder data for layout review).
+          Full transaction register aligned with dashboard snapshot.
         </p>
 
         <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">

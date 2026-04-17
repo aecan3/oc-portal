@@ -4,7 +4,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase";
-import SignOutButton from "../components/SignOutButton";
 import DocumentsPageClient, { type DocumentListItem } from "./DocumentsPageClient";
 
 const storageBucket = "property-docs";
@@ -17,7 +16,6 @@ const toTimestamp = (value: unknown): number => {
 
 export default function DocumentsLibraryClient() {
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState("Alex");
   const [propertyId, setPropertyId] = useState<string | number | null>(null);
   const [resolvedDocs, setResolvedDocs] = useState<DocumentListItem[]>([]);
   const [section151ModalOpen, setSection151ModalOpen] = useState(false);
@@ -114,34 +112,6 @@ export default function DocumentsLibraryClient() {
 
       const mapped = Array.from(byId.values()).sort((a, b) => b.dateMs - a.dateMs);
 
-      // Optional: profile name for header (does not block documents)
-      const {
-        data: { user },
-        error: userError,
-      } = await client.auth.getUser();
-      if (userError) {
-        console.log("Supabase auth.getUser error (non-blocking):", userError);
-      }
-      if (user) {
-        const { data: profile, error: profileError } = await client
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (profileError) {
-          console.log("Supabase profiles query error (non-blocking):", profileError);
-        }
-        if (profile && typeof profile === "object") {
-          const derivedName =
-            ("full_name" in profile && typeof (profile as any).full_name === "string" && (profile as any).full_name) ||
-            ("name" in profile && typeof (profile as any).name === "string" && (profile as any).name) ||
-            ("first_name" in profile && typeof (profile as any).first_name === "string" && (profile as any).first_name);
-          if (derivedName && !cancelled) {
-            setUserName(derivedName);
-          }
-        }
-      }
-
       if (!cancelled) {
         setResolvedDocs(mapped);
         setLoading(false);
@@ -173,16 +143,6 @@ export default function DocumentsLibraryClient() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5 sm:px-10 lg:px-12">
-          <div className="text-2xl font-extrabold tracking-tight text-slate-900">OC Portal</div>
-          <div className="flex items-center gap-4">
-            <p className="text-sm font-medium text-slate-600 sm:text-base">Welcome back, {userName}</p>
-            <SignOutButton />
-          </div>
-        </div>
-      </header>
-
       <main className="mx-auto w-full max-w-6xl px-6 py-8 sm:px-10 lg:px-12">
         <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-start sm:gap-6">
           <button

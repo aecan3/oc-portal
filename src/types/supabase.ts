@@ -75,6 +75,9 @@ export type Database = {
           id: string;
           user_id: string;
           property_id: string;
+          unit_number: string | null;
+          applicant_email: string | null;
+          occupancy_status: string | null;
           status: string;
           created_at: string;
         };
@@ -82,6 +85,9 @@ export type Database = {
           id?: string;
           user_id: string;
           property_id: string;
+          unit_number?: string | null;
+          applicant_email?: string | null;
+          occupancy_status?: string | null;
           status?: string;
           created_at?: string;
         };
@@ -89,6 +95,9 @@ export type Database = {
           id?: string;
           user_id?: string;
           property_id?: string;
+          unit_number?: string | null;
+          applicant_email?: string | null;
+          occupancy_status?: string | null;
           status?: string;
           created_at?: string;
         };
@@ -104,6 +113,56 @@ export type Database = {
             foreignKeyName: "join_requests_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      profiles: {
+        Row: {
+          id: string;
+          first_name: string | null;
+          last_name: string | null;
+          mobile_number: string | null;
+          home_address: string | null;
+          unit_number: string | null;
+          occupancy_status: string | null;
+          email: string | null;
+          full_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          first_name?: string | null;
+          last_name?: string | null;
+          mobile_number?: string | null;
+          home_address?: string | null;
+          unit_number?: string | null;
+          occupancy_status?: string | null;
+          email?: string | null;
+          full_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          first_name?: string | null;
+          last_name?: string | null;
+          mobile_number?: string | null;
+          home_address?: string | null;
+          unit_number?: string | null;
+          occupancy_status?: string | null;
+          email?: string | null;
+          full_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey";
+            columns: ["id"];
+            isOneToOne: true;
             referencedRelation: "users";
             referencedColumns: ["id"];
           },

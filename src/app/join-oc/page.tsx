@@ -2,6 +2,7 @@
 
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,9 +12,11 @@ type PropertySearchRow = {
   id: string;
   address: string;
   plan_number: string;
+  total_lots: number;
 };
 
 export default function JoinOCPage() {
+  const router = useRouter();
   const supabase = useMemo(() => {
     try {
       return createBrowserSupabaseClient();
@@ -23,11 +26,13 @@ export default function JoinOCPage() {
   }, []);
 
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [properties, setProperties] = useState<PropertySearchRow[]>([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [submittingPropertyId, setSubmittingPropertyId] = useState<string | null>(null);
-  const [pendingRequestedPropertyIds, setPendingRequestedPropertyIds] = useState<Set<string>>(new Set());
+  const [pendingRequestedUnitKeys, setPendingRequestedUnitKeys] = useState<Set<string>>(new Set());
+  const [selectedUnitByProperty, setSelectedUnitByProperty] = useState<Record<string, string>>({});
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
@@ -38,6 +43,7 @@ export default function JoinOCPage() {
         data: { user },
       } = await supabase.auth.getUser();
       setUserId(user?.id ?? null);
+      setUserEmail(user?.email ?? null);
     };
 
     void loadCurrentUser();
@@ -49,7 +55,7 @@ export default function JoinOCPage() {
     const loadPendingRequests = async () => {
       const { data, error } = await supabase
         .from("join_requests")
-        .select("property_id")
+        .select("property_id,unit_number")
         .eq("user_id", userId)
         .eq("status", "pending");
 
@@ -58,7 +64,9 @@ export default function JoinOCPage() {
         return;
       }
 
-      setPendingRequestedPropertyIds(new Set((data ?? []).map((row) => row.property_id)));
+      setPendingRequestedUnitKeys(
+        new Set((data ?? []).map((row) => `${row.property_id}|${String(row.unit_number ?? "").trim()}`)),
+      );
     };
 
     void loadPendingRequests();
@@ -80,7 +88,7 @@ export default function JoinOCPage() {
     const runSearch = async () => {
       const { data, error } = await supabase
         .from("properties")
-        .select("id,address,plan_number")
+        .select("id,address,plan_number,total_lots")
         .ilike("address", `%${trimmed}%`)
         .order("address", { ascending: true })
         .limit(20);
@@ -117,6 +125,35 @@ export default function JoinOCPage() {
       alert(message);
       return;
     }
+    const selectedUnit = selectedUnitByProperty[propertyId];
+    if (!selectedUnit) {
+      const message = "Please select your Unit Number before submitting.";
+      setErrorMessage(message);
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles" as "profiles")
+      .select("occupancy_status")
+      .eq("id", userId)
+      .maybeSingle();
+    const typedProfile = (profile as { occupancy_status?: string | null } | null);
+    const selectedOccupancyStatus = typedProfile?.occupancy_status?.trim();
+    if (!selectedOccupancyStatus) {
+      const message = "Please complete your profile occupancy status before requesting to join.";
+      setErrorMessage(message);
+      return;
+    }
+
+    const {
+      data: { user: submitUser },
+    } = await supabase.auth.getUser();
+    const applicantEmail = submitUser?.email ?? userEmail;
+    if (!applicantEmail) {
+      const message = "Unable to determine your account email for this request.";
+      setErrorMessage(message);
+      return;
+    }
 
     setSubmittingPropertyId(propertyId);
     setErrorMessage("");
@@ -124,6 +161,9 @@ export default function JoinOCPage() {
     const { error } = await supabase.from("join_requests").insert({
       user_id: userId,
       property_id: propertyId,
+      unit_number: selectedUnit,
+      occupancy_status: selectedOccupancyStatus,
+      applicant_email: applicantEmail,
       status: "pending",
     });
 
@@ -135,7 +175,7 @@ export default function JoinOCPage() {
       return;
     }
 
-    setPendingRequestedPropertyIds((prev) => new Set(prev).add(propertyId));
+    router.push("/join-success");
   };
 
   return (
@@ -165,8 +205,11 @@ export default function JoinOCPage() {
             <p className="text-sm font-medium text-slate-600">No matching properties found.</p>
           ) : (
             properties.map((property) => {
-              const alreadyPending = pendingRequestedPropertyIds.has(property.id);
+              const selectedUnit = selectedUnitByProperty[property.id] ?? "";
+              const pendingKey = `${property.id}|${selectedUnit}`;
+              const alreadyPending = selectedUnit ? pendingRequestedUnitKeys.has(pendingKey) : false;
               const isSubmitting = submittingPropertyId === property.id;
+              const unitOptions = Array.from({ length: Math.max(1, property.total_lots || 0) }, (_unused, index) => String(index + 1));
 
               return (
                 <Card key={property.id} className="border-slate-200 bg-white shadow-sm">
@@ -174,10 +217,36 @@ export default function JoinOCPage() {
                     <CardTitle className="text-lg">{property.address}</CardTitle>
                     <CardDescription>Plan Number: {property.plan_number}</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor={`unit-select-${property.id}`}
+                        className="text-sm font-semibold text-slate-700"
+                      >
+                        Select your Unit Number
+                      </label>
+                      <select
+                        id={`unit-select-${property.id}`}
+                        value={selectedUnit}
+                        onChange={(event) =>
+                          setSelectedUnitByProperty((current) => ({
+                            ...current,
+                            [property.id]: event.target.value,
+                          }))
+                        }
+                        className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                      >
+                        <option value="">Select a unit</option>
+                        {unitOptions.map((unit) => (
+                          <option key={`${property.id}-${unit}`} value={unit}>
+                            Unit {unit}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     <Button
                       type="button"
-                      disabled={alreadyPending || isSubmitting}
+                      disabled={!selectedUnit || alreadyPending || isSubmitting}
                       onClick={() => void handleRequestToJoin(property.id)}
                     >
                       {alreadyPending ? "Request Pending" : isSubmitting ? "Submitting..." : "Request to Join"}
