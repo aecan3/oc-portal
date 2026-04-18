@@ -9,6 +9,7 @@ export type Database = {
           address: string;
           plan_number: string;
           total_lots: number;
+          total_bank_balance: number | null;
           manager_id: string | null;
           created_at: string;
         };
@@ -17,6 +18,7 @@ export type Database = {
           address: string;
           plan_number: string;
           total_lots: number;
+          total_bank_balance?: number | null;
           manager_id?: string | null;
           created_at?: string;
         };
@@ -25,6 +27,7 @@ export type Database = {
           address?: string;
           plan_number?: string;
           total_lots?: number;
+          total_bank_balance?: number | null;
           manager_id?: string | null;
           created_at?: string;
         };
@@ -34,6 +37,138 @@ export type Database = {
             columns: ["manager_id"];
             isOneToOne: false;
             referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      documents: {
+        Row: {
+          id: string;
+          title: string | null;
+          category: string | null;
+          property_id: string | null;
+          uploaded_at: string | null;
+          storage_path: string | null;
+          file_url: string | null;
+          bucket: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          title?: string | null;
+          category?: string | null;
+          property_id?: string | null;
+          uploaded_at?: string | null;
+          storage_path?: string | null;
+          file_url?: string | null;
+          bucket?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          title?: string | null;
+          category?: string | null;
+          property_id?: string | null;
+          uploaded_at?: string | null;
+          storage_path?: string | null;
+          file_url?: string | null;
+          bucket?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "documents_property_id_fkey";
+            columns: ["property_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      agm_notices: {
+        Row: {
+          id: string;
+          property_id: string;
+          created_by: string;
+          meeting_at: string;
+          location: string;
+          agenda_items: string;
+          manager_report: string | null;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          property_id: string;
+          created_by: string;
+          meeting_at: string;
+          location: string;
+          agenda_items: string;
+          manager_report?: string | null;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          property_id?: string;
+          created_by?: string;
+          meeting_at?: string;
+          location?: string;
+          agenda_items?: string;
+          manager_report?: string | null;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "agm_notices_property_id_fkey";
+            columns: ["property_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      motions: {
+        Row: {
+          id: string;
+          property_id: string;
+          created_by: string;
+          title: string;
+          resolution: string;
+          closing_date: string;
+          other_points: string | null;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          property_id: string;
+          created_by: string;
+          title: string;
+          resolution: string;
+          closing_date: string;
+          other_points?: string | null;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          property_id?: string;
+          created_by?: string;
+          title?: string;
+          resolution?: string;
+          closing_date?: string;
+          other_points?: string | null;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "motions_property_id_fkey";
+            columns: ["property_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
             referencedColumns: ["id"];
           },
         ];

@@ -191,7 +191,7 @@ export default function SecretaryDashboardPage() {
   const hasPendingRequests = pendingRequests.length > 0;
   const levyStatuses: UnitLevyStatus[] =
     isManager && activeProperty
-      ? Array.from({ length: activeProperty.total_lots }, (_unused, idx) => {
+      ? Array.from({ length: activeProperty?.total_lots ?? 0 }, (_unused, idx) => {
           const unitNumber = idx + 1;
           const hasPayment = MOCK_TRANSACTIONS.some(
             (tx) => tx.type === "Credit" && tx.description.includes(`Q1 Levy — Unit ${unitNumber}`),
@@ -241,7 +241,7 @@ export default function SecretaryDashboardPage() {
               <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Levy Status by Unit</p>
                 <p className="mt-1 text-xs font-medium text-slate-600">
-                  {activeProperty.address} - {activeProperty.plan_number}
+                  {activeProperty?.address ?? "—"} - {activeProperty?.plan_number ?? "—"}
                 </p>
                 <ul className="mt-3 space-y-2 text-sm">
                   {levyStatuses.map((status) => (
